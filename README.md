@@ -1,118 +1,94 @@
 
 # TVMaze TV Show Summary — Lab 03
 
-## Project Overview
+This project refactors my Lab 02 TVMaze program into an installable Python package using object-oriented programming (OOP). It downloads TV show records, calculates summary statistics, and saves the results to JSON.
 
-This project refactors my Lab 02 TVMaze data aggregation script into an installable Python package using Object-Oriented Programming (OOP).
+## Data source
 
-The application downloads TV show data, processes the records, calculates summary statistics, and saves the results as a JSON file.
-
-## Data Source
-
-TVMaze API:
-
-https://api.tvmaze.com/shows?page=0
-
-The application retrieves TV show records from page 0 of the API.
+- URL: https://api.tvmaze.com/shows?page=0
+- Each record represents one TV show.
+- The API returned approximately 240 records during testing.
 
 ## Setup
 
-Python 3.11 or newer is required.
+Create and activate the Conda environment:
 
-Create a virtual environment:
-
-```powershell
-python -m venv .venv
+```bash
+conda env create -f environment.yml
+conda activate tvsummary
 ```
 
-Install the project and its dependencies:
+Install the pinned dependencies and the package:
 
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e .
+```bash
+pip install -r requirements.txt
+pip install -e .
 ```
-
-Alternatively, install the pinned dependencies:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-A Conda environment configuration is also provided in `environment.yml`.
 
 ## Run
 
-Run the application:
-
-```powershell
-.\.venv\Scripts\python.exe main.py
+```bash
+python main.py
 ```
 
-The summary is saved to:
+Output: `data/processed/summary.json`
 
-`data/processed/summary.json`
+The summary contains the source URL, record count, language counts, average rating, and sorted unique genres.
 
 ## Test
 
 Run the offline unit tests:
 
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```bash
+python -m unittest discover -s tests
 ```
 
-The tests cover language counts, average ratings, unique genres, and missing values. They do not require an internet connection.
+The tests check language counts, average ratings, unique genres, and handling of missing values.
 
-## Project Layout
+## Layout
 
-```text
-lab03-tv-show-package/
-├── data/
-│   ├── raw/
-│   └── processed/
-├── src/
-│   └── tvsummary/
-│       ├── __init__.py
-│       ├── config.py
-│       ├── models.py
-│       ├── sources.py
-│       ├── aggregations.py
-│       └── report.py
-├── tests/
-│   └── test_tvsummary.py
-├── main.py
-├── pyproject.toml
-├── environment.yml
-├── requirements.txt
-├── records.py
-├── summary.json
-└── README.md
-```
+- `src/tvsummary/__init__.py` — Exposes the package's public classes and functions.
+- `src/tvsummary/config.py` — Stores the API URL, request timeout, and output path.
+- `src/tvsummary/models.py` — Defines the `TVShow` class and cleans record values.
+- `src/tvsummary/sources.py` — Downloads TVMaze records and converts them into `TVShow` objects.
+- `src/tvsummary/aggregations.py` — Defines the aggregation base class and specialized subclasses.
+- `src/tvsummary/report.py` — Builds the summary and writes JSON output.
+- `main.py` — Connects the components and handles download failures.
+- `tests/test_tvsummary.py` — Contains offline unit tests.
+- `data/raw/` — Reserved for raw data.
+- `data/processed/` — Stores the generated summary.
 
-## What Moved Where
+## What moved where
 
-| Lab 02 Functionality | Lab 03 Location |
+| Lab 02 function | Lab 03 location |
 |---|---|
-| API URL and configuration | `config.py` |
-| Downloading TV show records | `sources.py` |
-| Cleaning and representing TV shows | `models.py` |
-| Language counts | `aggregations.py` |
-| Average rating | `aggregations.py` |
-| Unique genres | `aggregations.py` |
-| Building and saving JSON | `report.py` |
-| Running the application | `main.py` |
+| `fetch_shows()` | `TVMazeSource.fetch()` in `sources.py` |
+| `count_shows_by_language()` | `LanguageCount.compute()` in `aggregations.py` |
+| `calculate_average_rating()` | `AverageRating.compute()` in `aggregations.py` |
+| `get_show_names()` | `TVShow.name` in `models.py` |
+| `get_unique_genres()` | `GenreList.compute()` in `aggregations.py` |
+| `build_summary()` | `build_summary()` in `report.py`, with metadata assembled in `main.py` |
+| `write_summary()` | `save_summary()` in `report.py` |
+| `main()` | `main()` in `main.py` |
 
-## Design Choices
+## Design choices
 
-- **Encapsulation:** The `TVShow` class stores cleaned TV show attributes.
-- **Inheritance:** Aggregation classes inherit from the abstract `Aggregation` class.
-- **Method overriding:** Each aggregation implements its own `compute()` method.
-- **Polymorphism:** The report builder processes different aggregation objects through a common interface.
-- **Separation of concerns:** Data retrieval, modeling, aggregation, and reporting are separated into modules.
-- **Editable installation:** The package uses a `src` layout and can be installed with `pip install -e .`.
+The `TVShow` class represents one record and handles missing or malformed values when an object is created.
 
-## Known Limitations
+The `TVMazeSource` class is responsible for downloading data and creating `TVShow` objects. It keeps network access separate from aggregation and reporting.
 
-- The application retrieves only page 0 of the TVMaze API.
-- An internet connection is required to download live records.
-- API data may change over time, affecting summary values.
-- The application reports download errors rather than automatically retrying.
-- The original Lab 02 files are retained for reference.
+The abstract `Aggregation` class defines a shared `compute()` interface. `LanguageCount`, `AverageRating`, and `GenreList` inherit from it and override this method.
+
+Polymorphism is used when the report builder loops over aggregation objects and calls `compute()` without checking their subclass types.
+
+To add another aggregation, a new subclass can inherit from `Aggregation`, implement `compute()`, and be added to the aggregations dictionary in `main.py`.
+
+The package uses a `src` layout and supports editable installation with `pip install -e .`.
+
+## Known limitations
+
+- Only page 0 of the TVMaze API is downloaded.
+- An internet connection is required for live data retrieval.
+- TVMaze data can change over time, affecting the summary values.
+- Failed downloads produce an error message, but automatic retries are not implemented.
+- The old Lab 02 summary is retained at the repository root for comparison.

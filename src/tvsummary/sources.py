@@ -3,16 +3,17 @@
 import requests
 
 from .config import TVMAZE_URL, REQUEST_TIMEOUT
+from .models import TVShow
 
 
 class TVMazeSource:
-    """Download TV show records from the TVMaze API."""
+    """Download and convert TV show records from TVMaze."""
 
     def __init__(self, url=TVMAZE_URL):
         self.url = url
 
     def fetch(self):
-        """Return raw TV show records from the API."""
+        """Return a list of TVShow objects."""
         try:
             response = requests.get(
                 self.url,
@@ -25,7 +26,7 @@ class TVMazeSource:
             if not isinstance(data, list):
                 raise ValueError("Expected a list of TV shows.")
 
-            return data
+            return [TVShow(record) for record in data]
 
         except (requests.RequestException, ValueError) as error:
             raise RuntimeError(

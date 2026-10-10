@@ -1,7 +1,6 @@
 """Entry point for the TVMaze summary application."""
 
 from tvsummary.config import TVMAZE_URL
-from tvsummary.models import TVShow
 from tvsummary.sources import TVMazeSource
 from tvsummary.aggregations import (
     LanguageCount,
@@ -12,12 +11,15 @@ from tvsummary.report import build_summary, save_summary
 
 
 def main():
-    """Fetch, clean, aggregate, and save TV show data."""
+    """Fetch, aggregate, and save TV show data."""
 
     source = TVMazeSource()
-    raw_records = source.fetch()
 
-    shows = [TVShow(record) for record in raw_records]
+    try:
+        shows = source.fetch()
+    except RuntimeError as error:
+        print(f"Download failed: {error}")
+        return
 
     aggregations = {
         "language_counts": LanguageCount(),
@@ -29,13 +31,13 @@ def main():
 
     summary = {
         "source_url": TVMAZE_URL,
-        "record_count": len(raw_records),
+        "record_count": len(shows),
         **results,
     }
 
     save_summary(summary)
 
-    print(f"Downloaded {len(raw_records)} records.")
+    print(f"Downloaded {len(shows)} records.")
     print("Summary saved successfully.")
 
 
